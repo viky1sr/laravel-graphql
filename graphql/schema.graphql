@@ -1,0 +1,71 @@
+"A date string with format `Y-m-d`, e.g. `2011-05-23`."
+scalar Date @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\Date")
+
+"A datetime string with format `Y-m-d H:i:s`, e.g. `2018-05-23 13:43:32`."
+scalar DateTime @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\DateTime")
+
+type Query {
+    user(id: ID! @eq): User @find
+    users: [User!]! @paginate
+    userall: [User!]! @all
+    me: User @auth(guard: "api")
+
+    article(id: ID! @eq): Article @find
+    articles: [Article!]! @paginate
+}
+
+type PostPaginator {
+    data: [User!]!
+
+    "Pagination information about the list of items."
+    paginatorInfo: PaginatorInfo!
+}
+
+type PaginatorInfo {
+    count: Int!
+    currentPage: Int!
+    firstItem: Int
+    hasMorePages: Boolean!
+    lastItem: Int
+    lastPage: Int!
+    perPage: Int!
+    total: Int!
+}
+
+type User {
+    id: ID!
+    name: String!
+    email: String!
+    created_at: DateTime!
+    updated_at: DateTime!
+    articles: [Article!]! @hasMany
+}
+
+type Article {
+    id: ID!
+    title: String!
+    content: String!
+    text: String!
+    created_at: DateTime!
+    author: User! @belongsTo(relation: "user")
+}
+
+type Mutation {
+    createUser(
+        name: String! @rules(apply: ["required"], messages: {required: "Please add your name"})
+        email: String! @rules(apply: ["email", "unique:users"])
+        password: String! @bcrypt @rules(apply: ["min:6"])
+    ): User @create
+
+    login(
+        email: String!
+        password: String!
+    ): String @field(resolver: "AuthMutator@resolve")
+
+
+
+    createArticle(title: String!, content: String!): Article
+    @field(resolver: "ArticleMutator@create")
+    @middleware(checks: ["auth:api"])
+
+}
